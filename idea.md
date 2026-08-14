@@ -43,22 +43,22 @@ The initial subjects are Mathematics, Coding, and Computer Science. Categories, 
 
 The current quiz logic is intentionally local so the frontend works as a standalone prototype. Replace it with the API described in [endpoints.md](./endpoints.md) when the Node.js/TypeScript + MongoDB backend is available.
 
-- [ ] Fetch categories and question availability from `GET /categories`.
-- [ ] Start a server-owned session through `POST /quiz/start` instead of selecting local questions.
-- [ ] Submit each answer to `POST /quiz/:sessionId/answer`; use the server result for feedback and score.
-- [ ] Complete the quiz through `POST /quiz/:sessionId/complete`; use the returned result screen summary.
+- [x] Fetch categories and question availability from `GET /categories`.
+- [x] Start a server-owned session through `POST /quiz/start` instead of selecting local questions.
+- [x] Submit each answer to `POST /quiz/:sessionId/answer`; use the server result for feedback and score.
+- [x] Complete the quiz through `POST /quiz/:sessionId/complete`; use the returned result screen summary.
 - [ ] Support restoring an in-progress quiz through `GET /quiz/:sessionId`.
 - [ ] Show authenticated player quiz history from `GET /quiz/history` once accounts exist.
-- [ ] Move the built-in question bank from the local source into MongoDB, while retaining a JSON import/seed workflow.
+- [x] Move the built-in question bank from the local source into MongoDB, while retaining a JSON import/seed workflow.
 - [ ] Add frontend loading, empty, retry, network-error, and expired-session states for API requests.
-- [ ] Read the API base URL from `NEXT_PUBLIC_API_URL`; do not expose server secrets in the frontend.
-- [ ] Make backend validation authoritative: scores, timers, question ownership, and answers must never be trusted from browser state.
+- [x] Read the API base URL from `NEXT_PUBLIC_API_URL`; do not expose server secrets in the frontend.
+- [x] Make backend validation authoritative: scores, timers, question ownership, and answers must never be trusted from browser state.
 
 ## Content improvements
 
 - [ ] Expand each default category substantially so 15- and 20-question games provide more variety across many rounds.
 - [ ] Add more explanations, accepted answer variants, and a reviewed difficulty value to every question.
-- [ ] Provide a real JSON import/export format and a documented seed process for question contributors.
+- [x] Provide a JSON import format and administrator dashboard for question contributors. Export remains future work.
 - [ ] Add a difficulty selector: Easy, Medium, Hard, Expert, and Mixed.
 - [ ] Add additional subjects, beginning with Physics, Chemistry, Biology, History, Geography, Economics, General Knowledge, English, Logic, Electronics, Networking, AI/ML, and Cybersecurity.
 
@@ -89,8 +89,10 @@ The current quiz logic is intentionally local so the frontend works as a standal
 
 ### Social and administration
 
-- [ ] Multiplayer: 1v1, friends, live competitions, and team battles.
-- [ ] Admin dashboard to create, edit, disable, and delete questions/categories; view question performance statistics.
+- [x] Social lobbies: guest identities, friend requests, 1v1 and team lobby creation/joining, and Socket.IO real-time room chat.
+- [ ] Live shared quiz competitions and team scoring (lobby/chat foundation is complete).
+- [x] Admin dashboard to create and import questions, plus protected API CRUD for questions and categories.
+- [ ] Admin question/category edit and delete controls in the dashboard, and question performance statistics.
 - [ ] AI-generated question proposal workflow with administrator review before publishing.
 
 ## Backend responsibilities
