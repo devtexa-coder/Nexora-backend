@@ -7,6 +7,7 @@ const schema = z.object({
   MONGODB_URI: z.string().min(1),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
   JWT_SECRET: z.string().min(16).default("development-only-secret-change-me"),
+  ADMIN_API_KEY: z.string().min(24),
 });
 
 export const env = schema.parse(process.env);
