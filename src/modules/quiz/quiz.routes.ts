@@ -1,0 +1,13 @@
+import { Router } from "express";
+import { asyncHandler } from "../../common/async-handler.js";
+import { ApiError } from "../../common/api-error.js";
+import { parse } from "../../common/validation.js";
+import { QuizSession } from "./quiz.model.js";
+import { startQuizSchema, submitAnswerSchema } from "./quiz.schemas.js";
+import { completeQuiz, startQuiz, submitAnswer, summary } from "./quiz.service.js";
+export const quizRouter = Router();
+quizRouter.post("/start", asyncHandler(async (req, res) => res.status(201).json(await startQuiz(parse(startQuizSchema, req.body)))));
+quizRouter.post("/:sessionId/answer", asyncHandler(async (req, res) => { const input = parse(submitAnswerSchema, req.body); res.json(await submitAnswer(String(req.params.sessionId), input.questionId, input.answer ?? "")); }));
+quizRouter.post("/:sessionId/complete", asyncHandler(async (req, res) => res.json(await completeQuiz(String(req.params.sessionId)))));
+quizRouter.get("/history", asyncHandler(async (req, res) => { const playerId = typeof req.query.playerId === "string" ? req.query.playerId : undefined; if (!playerId) throw new ApiError(400, "INVALID_INPUT", "playerId is required."); const limit = Math.min(Number(req.query.limit) || 20, 50); const sessions = await QuizSession.find({ playerId, status: "completed" }).sort({ createdAt: -1 }).limit(limit); res.json({ data: sessions.map(summary), nextCursor: null }); }));
+quizRouter.get("/:sessionId", asyncHandler(async (req, res) => { const session = await QuizSession.findOne({ id: String(req.params.sessionId) }); if (!session) throw new ApiError(404, "SESSION_NOT_FOUND", "Quiz session not found."); res.json({ sessionId: session.id, status: session.status, player: { id: session.playerId, name: session.playerName }, category: { id: session.categoryId, name: session.categoryName }, questionCount: session.questionCount, timePerQuestionSeconds: session.timePerQuestionSeconds, questions: session.questions.map(({ questionId: id, question, difficulty, explanation }) => ({ id, question, difficulty, ...(explanation ? { explanation } : {}) })), answers: session.answers.map(({ questionId, answer, status, pointsAwarded, answeredAt }) => ({ questionId, answer, status, pointsAwarded, answeredAt })), score: session.score, startedAt: session.startedAt.toISOString(), ...(session.status === "completed" ? { result: summary(session) } : {}) }); }));
