@@ -27,7 +27,7 @@ adminRouter.post("/questions", asyncHandler(async (req, res) => {
   const categories = await Category.find({ id: { $in: categoryIds } }).select({ id: 1 });
   const knownIds = new Set(categories.map((category) => category.id));
   const missing = categoryIds.filter((id) => !knownIds.has(id));
-  if (missing.length) throw new ApiError(400, "INVALID_CATEGORY", `Unknown category: ${missing.join(", ")}.`);
+  if (missing.length) await Category.insertMany(missing.map((id) => ({ id, slug: id, name: id.split("-").map((word) => word[0]?.toUpperCase() + word.slice(1)).join(" "), active: true })));
 
   const created = await Question.insertMany(questions.map((question) => ({
     ...question,
@@ -45,7 +45,11 @@ adminRouter.get("/questions", asyncHandler(async (_req, res) => {
   res.json({ data: questions });
 }));
 adminRouter.patch("/questions/:id", asyncHandler(async (req, res) => {
-  const fields = parse(createQuestionsSchema.shape.questions.element.partial().omit({ categoryId: true }), req.body);
+  const fields = parse(createQuestionsSchema.shape.questions.element.partial(), req.body);
+  if (fields.categoryId) {
+    const category = await Category.findOne({ id: fields.categoryId });
+    if (!category) throw new ApiError(400, "INVALID_CATEGORY", `Unknown category: ${fields.categoryId}.`);
+  }
   const question = await Question.findOneAndUpdate({ id: String(req.params.id) }, { $set: fields }, { new: true });
   if (!question) throw new ApiError(404, "QUESTION_NOT_FOUND", "Question not found.");
   res.json({ data: question });
@@ -56,8 +60,8 @@ adminRouter.delete("/questions/:id", asyncHandler(async (req, res) => {
   res.status(204).send();
 }));
 
-const categoryInput = z.object({ name: z.string().trim().min(2).max(50), description: z.string().trim().max(250).optional(), icon: z.string().trim().max(12).optional(), active: z.boolean().default(true) }).strict();
+const categoryInput = z.object({ id: z.string().trim().min(1).max(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and hyphens for the category ID.").optional(), name: z.string().trim().min(2).max(50), description: z.string().trim().max(250).optional(), icon: z.string().trim().max(12).optional(), active: z.boolean().default(true) }).strict();
 adminRouter.get("/categories", asyncHandler(async (_req, res) => res.json({ data: await Category.find().sort({ name: 1 }) })));
-adminRouter.post("/categories", asyncHandler(async (req, res) => { const input = parse(categoryInput, req.body); const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""); if (!slug) throw new ApiError(400, "INVALID_INPUT", "Category name must include letters or numbers."); const category = await Category.create({ ...input, id: `cat_${crypto.randomUUID()}`, slug }); res.status(201).json({ data: category }); }));
-adminRouter.patch("/categories/:id", asyncHandler(async (req, res) => { const input = parse(categoryInput.partial(), req.body); const category = await Category.findOneAndUpdate({ id: String(req.params.id) }, { $set: input }, { new: true }); if (!category) throw new ApiError(404, "CATEGORY_NOT_FOUND", "Category not found."); res.json({ data: category }); }));
+adminRouter.post("/categories", asyncHandler(async (req, res) => { const input = parse(categoryInput, req.body); const slug = input.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""); if (!slug) throw new ApiError(400, "INVALID_INPUT", "Category name must include letters or numbers."); const category = await Category.create({ ...input, id: input.id ?? `cat_${crypto.randomUUID()}`, slug }); res.status(201).json({ data: category }); }));
+adminRouter.patch("/categories/:id", asyncHandler(async (req, res) => { const input = parse(categoryInput.omit({ id: true }).partial(), req.body); const category = await Category.findOneAndUpdate({ id: String(req.params.id) }, { $set: input }, { new: true }); if (!category) throw new ApiError(404, "CATEGORY_NOT_FOUND", "Category not found."); res.json({ data: category }); }));
 adminRouter.delete("/categories/:id", asyncHandler(async (req, res) => { const category = await Category.findOne({ id: String(req.params.id) }); if (!category) throw new ApiError(404, "CATEGORY_NOT_FOUND", "Category not found."); const questionCount = await Question.countDocuments({ categoryId: category.id }); if (questionCount) throw new ApiError(409, "CATEGORY_HAS_QUESTIONS", "Disable this category or remove its questions first."); await category.deleteOne(); res.status(204).send(); }));
